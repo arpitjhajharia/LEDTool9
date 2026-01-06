@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admire Signage - LED Quoting Tool v8</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Print Styles */
+        @media print {
+            @page { size: A4; margin: 0; }
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white; -webkit-print-color-adjust: exact; }
+            #root { margin: 0; padding: 0; }
+            .dark { color: black !important; background: white !important; }
+            .modal-content { box-shadow: none !important; border: none !important; }
+        }
+        
+        .print-only { display: none; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 transition-colors duration-200">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // --- Icons ---
+        const IconBase = ({ children, size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
+        );
+
+        const Icons = {
+            Calculator: (props) => <IconBase {...props}><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></IconBase>,
+            Settings: (props) => <IconBase {...props}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></IconBase>,
+            Printer: (props) => <IconBase {...props}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></IconBase>,
+            Plus: (props) => <IconBase {...props}><path d="M5 12h14"/><path d="M12 5v14"/></IconBase>,
+            Trash2: (props) => <IconBase {...props}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></IconBase>,
+            Monitor: (props) => <IconBase {...props}><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></IconBase>,
+            DollarSign: (props) => <IconBase {...props}><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></IconBase>,
+            Box: (props) => <IconBase {...props}><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" x2="12" y1="22.08" y2="12"/></IconBase>,
+            Wrench: (props) => <IconBase {...props}><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></IconBase>,
+            Percent: (props) => <IconBase {...props}><line x1="19" x2="5" y1="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></IconBase>,
+            Edit: (props) => <IconBase {...props}><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></IconBase>,
+            Sun: (props) => <IconBase {...props}><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></IconBase>,
+            Moon: (props) => <IconBase {...props}><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></IconBase>,
+            X: (props) => <IconBase {...props}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></IconBase>,
+            Eye: (props) => <IconBase {...props}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></IconBase>,
+            Copy: (props) => <IconBase {...props}><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></IconBase>,
+            RefreshCw: (props) => <IconBase {...props}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></IconBase>,
+            Save: (props) => <IconBase {...props}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></IconBase>,
+            FileText: (props) => <IconBase {...props}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></IconBase>,
+            Download: (props) => <IconBase {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></IconBase>
+        };
+
+        const { Calculator, Settings, Printer, Plus, Trash2, Monitor, DollarSign, Box, Wrench, Percent, Edit, Sun, Moon, X, Eye, Copy, RefreshCw, Save, FileText, Download } = Icons;
+
+        // --- Firebase Config Logic ---
+        const externalConfig = {
+            apiKey: "AIzaSyCSYfgzRvyO0OhcLZqbRbJtjmU8JtQ1qa8",
+            authDomain: "led-tool-c9f51.firebaseapp.com",
+            projectId: "led-tool-c9f51",
+            storageBucket: "led-tool-c9f51.firebasestorage.app",
+            messagingSenderId: "24288605388",
+            appId: "1:24288605388:web:56a7e9542399d3d1a97e69"
+        };
+
+        let firebaseConfig;
+        let appId = 'admire-signage-external';
+
+        if (typeof __firebase_config !== 'undefined') {
+            firebaseConfig = JSON.parse(__firebase_config);
+            appId = typeof __app_id !== 'undefined' ? __app_id : appId;
+        } else {
+            firebaseConfig = externalConfig;
+        }
+
+        let app, auth, db, isConfigured = true;
+
+        if (!firebaseConfig.apiKey || firebaseConfig.apiKey.includes("REPLACE_WITH")) {
+            isConfigured = false;
+        } else {
+            try {
+                app = firebase.initializeApp(firebaseConfig);
+                auth = firebase.auth();
+                db = firebase.firestore();
+            } catch (e) {
+                console.error("Firebase Init Failed:", e);
+                isConfigured = false;
+            }
+        }
+
+        // --- Utils ---
+        const formatCurrency = (amount, currency = 'INR', compact = false) => {
+            return new Intl.NumberFormat(currency === 'INR' ? 'en-IN' : 'en-US', { 
+                style: 'currency', 
+                currency: currency, 
+                maximumFractionDigits: 0,
+                notation: compact ? "compact" : "standard"
+            }).format(amount);
+        };
+
+        const generateId = () => Math.random().toString(36).substr(2, 9).toUpperCase();
+
+        // --- Components ---
+
+        // 1. Inventory Manager
+        const InventoryManager = ({ user }) => {
+            const [items, setItems] = React.useState([]);
+            const [editingId, setEditingId] = React.useState(null);
+            const [newItem, setNewItem] = React.useState({ 
+                type: 'module', brand: '', model: '', vendor: '', pitch: '', 
+                width: 250, height: 250, price: 0, carriage: 0, currency: 'INR', indoor: true,
+                brightness: '', refreshRate: '', scanRate: '', grayScale: ''
+            });
+            const [loading, setLoading] = React.useState(true);
+
+            React.useEffect(() => {
+                if (!user || !db) return;
+                const unsub = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('inventory')
+                    .onSnapshot(snap => {
+                        const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        setItems(data);
+                        setLoading(false);
+                    }, err => console.error(err));
+                return () => unsub();
+            }, [user]);
+
+            const handleSaveItem = async () => {
+                if (!newItem.brand || !newItem.model) return alert("Brand and Model are required");
+                try {
+                    const collectionRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('inventory');
+                    
+                    const itemData = {
+                        ...newItem,
+                        width: Number(newItem.width),
+                        height: Number(newItem.height),
+                        price: Number(newItem.price),
+                        carriage: Number(newItem.carriage || 0),
+                        pitch: Number(newItem.pitch),
+                        currency: newItem.currency || 'INR', 
+                        indoor: newItem.indoor === 'true' || newItem.indoor === true, 
+                        updatedAt: new Date()
+                    };
+
+                    if (editingId) {
+                        await collectionRef.doc(editingId).update(itemData);
+                        setEditingId(null);
+                    } else {
+                        await collectionRef.add({ ...itemData, createdAt: new Date() });
+                    }
+                    setNewItem({ type: 'module', brand: '', model: '', vendor: '', pitch: '', width: 250, height: 250, price: 0, carriage: 0, currency: 'INR', indoor: true, brightness: '', refreshRate: '', scanRate: '', grayScale: '' });
+                } catch (e) { console.error(e); }
+            };
+
+            const handleEdit = (item) => {
+                setNewItem({ ...item, vendor: item.vendor || '', currency: item.currency || 'INR', carriage: item.carriage || 0 });
+                setEditingId(item.id);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+
+            const handleCancelEdit = () => {
+                setEditingId(null);
+                setNewItem({ type: 'module', brand: '', model: '', vendor: '', pitch: '', width: 250, height: 250, price: 0, carriage: 0, currency: 'INR', indoor: true, brightness: '', refreshRate: '', scanRate: '', grayScale: '' });
+            };
+
+            const handleDelete = async (id) => {
+                if(confirm("Delete this item?")) {
+                    await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('inventory').doc(id).delete();
+                }
+            };
+
+            return (
+                <div className="p-6 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-xl font-bold flex items-center gap-2 text-slate-800 dark:text-white">
+                            <Box className="w-5 h-5 text-teal-600 dark:text-teal-400" /> Inventory Management
+                        </h2>
+                    </div>
+
+                    {/* Add/Edit Item Form */}
+                    <div className={`grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 rounded-lg transition-colors ${editingId ? 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700' : 'bg-slate-50 dark:bg-slate-700/50'}`}>
+                        <div className="col-span-2 md:col-span-4 flex justify-between items-center mb-2">
+                            <h3 className="text-sm font-bold uppercase text-slate-500 dark:text-slate-400">{editingId ? 'Editing Item' : 'Add New Item'}</h3>
+                            {editingId && <button onClick={handleCancelEdit} className="text-xs text-slate-500 dark:text-slate-400 hover:underline">Cancel Edit</button>}
+                        </div>
+                        
+                        {/* 1. Type */}
+                        <select className="p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white" value={newItem.type} onChange={e => setNewItem({...newItem, type: e.target.value})}>
+                            <option value="module">Module</option>
+                            <option value="cabinet">Cabinet</option>
+                            <option value="ready">Ready Unit</option>
+                            <option value="card">Receiving Card</option>
+                            <option value="psu">Power Supply</option>
+                            <option value="processor">Processor</option>
+                        </select>
+
+                        {/* 2. Pitch (Priority if Module) */}
+                        {newItem.type === 'module' && (
+                             <input placeholder="Pitch (e.g. 3.91)" type="number" className="p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white border-teal-500 ring-1 ring-teal-500" value={newItem.pitch} onChange={e => setNewItem({...newItem, pitch: e.target.value})} />
+                        )}
+
+                        <input placeholder="Brand" className="p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white" value={newItem.brand} onChange={e => setNewItem({...newItem, brand: e.target.value})} />
+                        <input placeholder="Model" className="p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white" value={newItem.model} onChange={e => setNewItem({...newItem, model: e.target.value})} />
+                        <input placeholder="Vendor / Supplier" className="p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white" value={newItem.vendor} onChange={e => setNewItem({...newItem, vendor: e.target.value})} />
+                        
+                        {/* Improved Price & Carriage Inputs */}
+                        <div className="flex gap-2 items-center col-span-2 md:col-span-1">
+                             <div className="flex-1 min-w-[100px]" title="Base Price">
+                                 <input 
+                                     placeholder="Base Price" 
+                                     type="number" 
+                                     className="p-2 w-full border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white" 
+                                     value={newItem.price} 
+                                     onChange={e => setNewItem({...newItem, price: e.target.value})} 
+                                 />
+                                 <div className="text-[9px] text-slate-400 mt-0.5 ml-1">BASE</div>
+                             </div>
+                             <span className="text-slate-400 font-bold mb-3">+</span>
+                             <div className="flex-1 min-w-[80px]" title="Carriage Inwards">
+                                 <input 
+                                     placeholder="Carriage" 
+                                     type="number" 
+                                     className="p-2 w-full border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white" 
+                                     value={newItem.carriage} 
+                                     onChange={e => setNewItem({...newItem, carriage: e.target.value})} 
+                                 />
+                                 <div className="text-[9px] text-slate-400 mt-0.5 ml-1">CARRIAGE</div>
+                             </div>
+                             <div className="flex-none mb-3">
+                                 <select 
+                                    className="p-2 border rounded bg-slate-100 dark:bg-slate-600 dark:border-slate-600 dark:text-white"
+                                    value={newItem.currency}
+                                    onChange={e => setNewItem({...newItem, currency: e.target.value})}
+                                >
+                                    <option value="INR">INR</option>
+                                    <option value="USD">USD</option>
+                                </select>
+                             </div>
+                        </div>
+                        
+                        {(newItem.type === 'module' || newItem.type === 'cabinet' || newItem.type === 'ready') && (
+                            <>
+                                <input placeholder="Width (mm)" type="number" className="p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white" value={newItem.width} onChange={e => setNewItem({...newItem, width: e.target.value})} />
+                                <input placeholder="Height (mm)" type="number" className="p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white" value={newItem.height} onChange={e => setNewItem({...newItem, height: e.target.value})} />
+                            </>
+                        )}
+                        {newItem.type === 'module' && (
+                            <>
+                                 <select className="p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white" value={newItem.indoor} onChange={e => setNewItem({...newItem, indoor: e.target.value})}>
+                                    <option value="true">Indoor</option>
+                                    <option value="false">Outdoor</option>
+                                 </select>
+                                 <input placeholder="Brightness (e.g. 800 nits)" className="p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white" value={newItem.brightness} onChange={e => setNewItem({...newItem, brightness: e.target.value})} />
+                                 <input placeholder="Refresh (e.g. 3840Hz)" className="p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white" value={newItem.refreshRate} onChange={e => setNewItem({...newItem, refreshRate: e.target.value})} />
+                                 <input placeholder="Scan (e.g. 1/16)" className="p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white" value={newItem.scanRate} onChange={e => setNewItem({...newItem, scanRate: e.target.value})} />
+                                 <input placeholder="Grayscale (e.g. 14bit)" className="p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white" value={newItem.grayScale} onChange={e => setNewItem({...newItem, grayScale: e.target.value})} />
+                            </>
+                        )}
+                        <button 
+                            onClick={handleSaveItem} 
+                            className={`px-4 py-2 rounded text-white flex items-center justify-center gap-2 hover:opacity-90 transition ${editingId ? 'bg-amber-600' : 'bg-teal-600'} col-span-2 md:col-span-1`}
+                        >
+                            {editingId ? <Edit size={16}/> : <Plus size={16} />} 
+                            {editingId ? 'Update Item' : 'Add Item'}
+                        </button>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left border border-slate-200 dark:border-slate-700 rounded">
+                            <thead className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 uppercase">
+                                <tr>
+                                    <th className="px-4 py-3">Type</th>
+                                    <th className="px-4 py-3">Vendor / Brand</th>
+                                    <th className="px-4 py-3">Specs</th>
+                                    <th className="px-4 py-3">Landed Cost</th>
+                                    <th className="px-4 py-3">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-700 bg-white dark:bg-slate-800">
+                                {items.map(item => (
+                                    <tr key={item.id} className={`hover:bg-slate-50 dark:hover:bg-slate-700/50 ${editingId === item.id ? 'bg-amber-50 dark:bg-amber-900/20' : ''}`}>
+                                        <td className="px-4 py-3 capitalize"><span className={`px-2 py-1 rounded-full text-xs ${item.type === 'module' ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' : item.type === 'ready' ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}>{item.type}</span></td>
+                                        <td className="px-4 py-3 dark:text-slate-200">
+                                            <div className="font-medium">{item.brand} {item.model}</div>
+                                            {item.vendor && <div className="text-[10px] text-teal-600 dark:text-teal-400 mt-0.5">{item.vendor}</div>}
+                                            {(item.type === 'module' || item.type === 'ready') && <div className="text-[10px] text-slate-400 mt-1">{item.indoor ? 'Indoor' : 'Outdoor'} • {item.brightness}</div>}
+                                        </td>
+                                        <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs">{item.width && `${item.width}x${item.height}mm`} {item.pitch && ` | P${item.pitch}`}</td>
+                                        <td className="px-4 py-3 dark:text-slate-200">
+                                            <div className="flex flex-col">
+                                                <span className="font-semibold">{formatCurrency((item.price || 0) + (item.carriage || 0), item.currency || 'INR')}</span>
+                                                {(item.carriage > 0) && <span className="text-[10px] text-slate-400">Base: {item.price} + Carr: {item.carriage}</span>}
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3 flex gap-2">
+                                            <button onClick={() => handleEdit(item)} className="text-blue-500 hover:text-blue-700 p-1 bg-blue-50 dark:bg-blue-900/30 rounded"><Edit size={14} /></button>
+                                            <button onClick={() => handleDelete(item.id)} className="text-red-400 hover:text-red-600 p-1 bg-red-50 dark:bg-red-900/30 rounded"><Trash2 size={14} /></button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        {items.length === 0 && !loading && <div className="text-center py-12 text-slate-400 bg-white dark:bg-slate-800">No items found.</div>}
+                    </div>
+                </div>
+            );
+        };
+
+        // 2. Updated Technical Drawing Visualizer (Responsive & Clean)
+        const ScreenVisualizer = ({ cols, rows, module, cabinet, unit }) => {
+            if (!module || !cabinet) return null;
+            
+            // Dimensions
+            const cabinetW = cabinet.width;
+            const cabinetH = cabinet.height;
+            const screenW = cabinetW * cols;
+            const screenH = cabinetH * rows;
+            
+            // Adaptive scaling factors
+            const maxDim = Math.max(screenW, screenH);
+            const margin = maxDim * 0.15; // 15% margin
+            
+            const formatDim = (mm) => {
+                if (unit === 'ft') return (mm / 304.8).toFixed(2) + ' ft';
+                return (mm / 1000).toFixed(2) + ' m';
+            };
+
+            return (
+                <div className="w-full flex flex-col bg-white rounded-lg border border-slate-200 overflow-hidden">
+                    <div className="w-full h-full min-h-[300px] p-8 flex items-center justify-center">
+                        <div className="relative" style={{ aspectRatio: `${screenW}/${screenH}`, width: '100%', maxHeight: '400px' }}>
+                             {/* Top Dimension */}
+                             <div className="absolute -top-8 left-0 right-0 text-center text-xs font-bold text-slate-500 flex items-center justify-center gap-2">
+                                <div className="h-[1px] flex-1 bg-slate-300"></div>
+                                <span>{formatDim(screenW)} ({cols} Cols)</span>
+                                <div className="h-[1px] flex-1 bg-slate-300"></div>
+                             </div>
+
+                             {/* Left Dimension */}
+                             <div className="absolute -left-8 top-0 bottom-0 text-center text-xs font-bold text-slate-500 flex flex-col items-center justify-center gap-2" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+                                <div className="w-[1px] flex-1 bg-slate-300"></div>
+                                <span>{formatDim(screenH)} ({rows} Rows)</span>
+                                <div className="w-[1px] flex-1 bg-slate-300"></div>
+                             </div>
+
+                             {/* The Grid Itself */}
+                             <div 
+                                className="w-full h-full grid bg-slate-800 border-2 border-slate-900 shadow-xl"
+                                style={{
+                                    gridTemplateColumns: `repeat(${cols}, 1fr)`,
+                                    gridTemplateRows: `repeat(${rows}, 1fr)`
+                                }}
+                            >
+                                {Array.from({ length: cols * rows }).map((_, i) => (
+                                    <div key={i} className="border-[0.5px] border-slate-600/50 relative"></div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // 3. Saved Quotes Manager
+        const SavedQuotesManager = ({ user, onLoadQuote, onDeleteQuote }) => {
+            const [quotes, setQuotes] = React.useState([]);
+
+            React.useEffect(() => {
+                if (!user) return;
+                const unsub = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('quotes')
+                    .orderBy('updatedAt', 'desc')
+                    .onSnapshot(snap => {
+                        setQuotes(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+                    });
+                return () => unsub();
+            }, [user]);
+
+            const handleDelete = async (id) => {
+                if(confirm("Are you sure you want to delete this quote?")) {
+                    await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('quotes').doc(id).delete();
+                }
+            };
+
+            return (
+                <div className="p-6 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-xl font-bold flex items-center gap-2 text-slate-800 dark:text-white">
+                            <FileText className="w-5 h-5 text-teal-600 dark:text-teal-400" /> Saved Quotes
+                        </h2>
+                    </div>
+                    
+                    <div className="grid gap-4">
+                        {quotes.map(quote => {
+                            const state = quote.calculatorState || {};
+                            const unit = state.unit || 'm';
+                            const width = state.finalWidth || state.targetWidth; // Fallback
+                            const height = state.finalHeight || state.targetHeight;
+                            const pitch = state.selectedPitch || 'N/A';
+                            const isIndoor = state.selectedIndoor === 'true';
+
+                            return (
+                                <div key={quote.id} className="p-4 border rounded-lg bg-slate-50 dark:bg-slate-700/50 dark:border-slate-600 flex justify-between items-center">
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <h3 className="font-bold text-slate-800 dark:text-white">{quote.project || 'Untitled Project'}</h3>
+                                            <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded border ${isIndoor ? 'bg-blue-50 text-blue-600 border-blue-200' : 'bg-green-50 text-green-600 border-green-200'}`}>
+                                                {isIndoor ? 'Indoor' : 'Outdoor'}
+                                            </span>
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-600">P{pitch}</span>
+                                        </div>
+                                        <p className="text-sm text-slate-500 mb-2">{quote.client || 'No Client'} • {new Date(quote.updatedAt?.seconds * 1000).toLocaleDateString()}</p>
+                                        
+                                        <div className="flex gap-2 flex-wrap text-xs text-slate-600 dark:text-slate-400">
+                                            <span className="bg-white dark:bg-slate-800 border dark:border-slate-600 px-2 py-1 rounded">Size: {state.targetWidth} x {state.targetHeight} {unit}</span>
+                                            <span className="bg-white dark:bg-slate-800 border dark:border-slate-600 px-2 py-1 rounded">Qty: {state.screenQty || 1}</span>
+                                            <span className="bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 border border-teal-100 dark:border-teal-800 px-2 py-1 rounded font-bold">{formatCurrency(quote.finalAmount, 'INR')}</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2 ml-4">
+                                        <button onClick={() => onLoadQuote(quote, false)} className="px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 flex items-center gap-1"><Edit size={14}/> Edit</button>
+                                        <button onClick={() => onLoadQuote(quote, true)} className="px-3 py-2 bg-slate-600 text-white rounded text-sm hover:bg-slate-700 flex items-center gap-1"><Copy size={14}/> Clone</button>
+                                        <button onClick={() => handleDelete(quote.id)} className="p-2 text-red-500 hover:bg-red-50 rounded"><Trash2 size={16}/></button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                        {quotes.length === 0 && <p className="text-center text-slate-400 py-10">No saved quotes found.</p>}
+                    </div>
+                </div>
+            );
+        };
+
+        // 4. Print Layout
+        const PrintLayout = ({ data, currency, exchangeRate }) => {
+            if (!data || !data.moduleType) return null;
+            
+            const { 
+                clientName, projectName, finalWidth, finalHeight, totalCabinets, 
+                moduleType, cabinetType, detailedItems, breakdown, 
+                screenQty, totalProjectSell, matrix, assemblyMode
+            } = data;
+
+            return (
+                <div className="p-12 max-w-[210mm] mx-auto bg-white min-h-screen relative text-slate-800 shadow-xl print:shadow-none print:p-0 print:w-full">
+                    {/* Header */}
+                    <div className="flex justify-between items-start mb-8 border-b-2 border-slate-800 pb-6">
+                        <div>
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="w-10 h-10 rounded bg-slate-900 flex items-center justify-center text-white font-bold text-xl">A</div>
+                                <div>
+                                    <h1 className="text-3xl font-bold tracking-tight text-slate-900 leading-none">ADMIRE</h1>
+                                    <p className="text-teal-600 font-medium tracking-widest text-[10px] uppercase">Signage Solutions</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="text-right">
+                            <h2 className="text-4xl font-light text-slate-400 tracking-wide">QUOTATION</h2>
+                            <p className="text-sm font-bold text-slate-700 mt-2">#{generateId()}</p>
+                            <p className="text-sm text-slate-500">{new Date().toLocaleDateString()}</p>
+                        </div>
+                    </div>
+
+                    {/* Info */}
+                    <div className="grid grid-cols-2 gap-8 mb-8">
+                        <div><p className="text-[10px] font-bold text-slate-400 uppercase">Project</p><p className="font-bold">{projectName}</p></div>
+                        <div><p className="text-[10px] font-bold text-slate-400 uppercase">Client</p><p className="font-bold">{clientName}</p></div>
+                    </div>
+
+                    {/* Panel Specs Grid */}
+                    <div className="mb-8 border border-slate-200 rounded-lg p-4 bg-slate-50">
+                        <div className="flex justify-between items-center mb-3">
+                            <h3 className="text-xs font-bold text-slate-900 uppercase">Panel Specifications</h3>
+                            <span className="text-xs font-bold text-teal-700 bg-teal-100 px-2 py-1 rounded">Quantity: {screenQty} Screens</span>
+                        </div>
+                        <div className="grid grid-cols-4 gap-4 text-xs">
+                            <div><span className="text-slate-500 block">Brightness</span><span className="font-bold">{moduleType?.brightness || '-'}</span></div>
+                            <div><span className="text-slate-500 block">Refresh Rate</span><span className="font-bold">{moduleType?.refreshRate || '-'}</span></div>
+                            <div><span className="text-slate-500 block">Scan Mode</span><span className="font-bold">{moduleType?.scanRate || '-'}</span></div>
+                            <div><span className="text-slate-500 block">Pixel Pitch</span><span className="font-bold">P{moduleType?.pitch || '-'}</span></div>
+                        </div>
+                    </div>
+
+                    {/* Detailed BOM Table */}
+                    <div className="mb-8">
+                        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-2">Cost Breakdown</h3>
+                        <table className="w-full text-xs border-collapse">
+                            <thead className="bg-slate-100 text-slate-700">
+                                <tr>
+                                    <th className="p-2 text-left border-b">Item</th>
+                                    <th className="p-2 text-right border-b">Rate</th>
+                                    <th className="p-2 text-center border-b border-l">Qty (1)</th>
+                                    <th className="p-2 text-right border-b">Amt (1)</th>
+                                    <th className="p-2 text-center border-b border-l font-semibold">Qty ({screenQty})</th>
+                                    <th className="p-2 text-right border-b font-semibold">Amt ({screenQty})</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {detailedItems.map((item, i) => (
+                                    <tr key={i}>
+                                        <td className="p-2 font-medium">{item.name} <span className="text-slate-400 font-normal block text-[10px]">{item.spec}</span></td>
+                                        <td className="p-2 text-right">{formatCurrency(item.unit, currency)}</td>
+                                        <td className="p-2 text-center border-l bg-slate-50">{item.qty}</td>
+                                        <td className="p-2 text-right bg-slate-50">{formatCurrency(item.total, currency)}</td>
+                                        <td className="p-2 text-center border-l font-semibold">{item.qty * screenQty}</td>
+                                        <td className="p-2 text-right font-semibold">{formatCurrency(item.total * screenQty, currency)}</td>
+                                    </tr>
+                                ))}
+                                <tr>
+                                    <td className="p-2 font-medium">Add. Costs <span className="text-slate-400 font-normal block text-[10px]">Labour, Transport, etc.</span></td>
+                                    <td className="p-2 text-right">-</td>
+                                    <td className="p-2 text-center border-l bg-slate-50">1 Lot</td>
+                                    <td className="p-2 text-right bg-slate-50">{formatCurrency(breakdown.extras, currency)}</td>
+                                    <td className="p-2 text-center border-l font-semibold">{screenQty} Lots</td>
+                                    <td className="p-2 text-right font-semibold">{formatCurrency(breakdown.extras * screenQty, currency)}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Financial Matrix */}
+                    <div className="mb-8 page-break-inside-avoid">
+                        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-2">Financial Summary</h3>
+                        <table className="w-full text-sm border border-slate-200">
+                            <thead className="bg-slate-800 text-white">
+                                <tr>
+                                    <th className="p-2 text-left w-1/4">Metric</th>
+                                    <th className="p-2 text-right w-1/4">Per Sq.Ft</th>
+                                    <th className="p-2 text-right w-1/4">Per Screen</th>
+                                    <th className="p-2 text-right w-1/4 bg-teal-700">Total Project</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-200 text-slate-700">
+                                <tr>
+                                    <td className="p-3 font-semibold bg-slate-50">Cost Price</td>
+                                    <td className="p-3 text-right">{formatCurrency(matrix.cost.sqft, currency)}</td>
+                                    <td className="p-3 text-right">{formatCurrency(matrix.cost.unit, currency)}</td>
+                                    <td className="p-3 text-right font-semibold bg-slate-50">{formatCurrency(matrix.cost.total, currency)}</td>
+                                </tr>
+                                <tr>
+                                    <td className="p-3 font-semibold bg-slate-50">Margin (₹)</td>
+                                    <td className="p-3 text-right text-teal-600">{formatCurrency(matrix.margin.sqft, currency)}</td>
+                                    <td className="p-3 text-right text-teal-600">{formatCurrency(matrix.margin.unit, currency)}</td>
+                                    <td className="p-3 text-right font-semibold text-teal-600 bg-slate-50">{formatCurrency(matrix.margin.total, currency)}</td>
+                                </tr>
+                                <tr className="text-lg">
+                                    <td className="p-3 font-bold bg-slate-50">Selling Price</td>
+                                    <td className="p-3 text-right font-bold">{formatCurrency(matrix.sell.sqft, currency)}</td>
+                                    <td className="p-3 text-right font-bold">{formatCurrency(matrix.sell.unit, currency)}</td>
+                                    <td className="p-3 text-right font-bold text-teal-700 bg-teal-50">{formatCurrency(matrix.sell.total, currency)}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        };
+
+        // Helper: Extra Input
+        const ExtraInput = ({ label, fieldKey, extras, updateExtra, currency }) => (
+            <div className="flex flex-col gap-1">
+                <label className="text-xs text-slate-500 dark:text-slate-400">{label}</label>
+                <div className="flex items-center">
+                    <input 
+                        type="number" 
+                        value={extras[fieldKey].val} 
+                        onChange={e => updateExtra(fieldKey, 'val', e.target.value)} 
+                        className="w-full p-2 border rounded-l text-sm border-r-0 dark:bg-slate-700 dark:border-slate-600 dark:text-white" 
+                    />
+                    <button 
+                        onClick={() => updateExtra(fieldKey, 'type', extras[fieldKey].type === 'abs' ? 'pct' : 'abs')}
+                        className={`px-3 py-2 text-xs font-bold border rounded-r w-16 transition-colors dark:border-slate-600 ${extras[fieldKey].type === 'pct' ? 'bg-teal-600 text-white border-teal-600' : 'bg-slate-100 dark:bg-slate-800 border-slate-300 text-slate-600 dark:text-slate-300'}`}
+                    >
+                        {extras[fieldKey].type === 'abs' ? (currency === 'INR' ? '₹' : '$') : '%'}
+                    </button>
+                </div>
+            </div>
+        );
+
+        // 5. Main Calculator (Stateless - Props Only)
+        const QuoteCalculator = ({ user, inventory, state, setState, exchangeRate, setExchangeRate, onSaveQuote }) => {
+            const {
+                client, project, screenQty, targetWidth, targetHeight, unit, 
+                selectedIndoor, assemblyMode, selectedPitch, selectedModuleId, 
+                selectedCabinetId, selectedCardId, selectedPSUId, selectedProcId, 
+                sizingMode, readyId, margin, extras, overrides, editingRow
+            } = state;
+
+            const [calculation, setCalculation] = React.useState(null);
+            const [showPreview, setShowPreview] = React.useState(false); 
+
+            const updateState = (key, value) => setState(prev => ({ ...prev, [key]: value }));
+            const updateExtra = (key, field, val) => {
+                setState(prev => ({ ...prev, extras: { ...prev.extras, [key]: { ...prev.extras[key], [field]: val } } }));
+            };
+
+            const handleOverride = (id, field, value) => {
+                setState(prev => ({
+                    ...prev, overrides: { ...prev.overrides, [id]: { ...prev.overrides[id], [field]: value } }
+                }));
+            };
+
+            const clearOverride = (id) => {
+                const newOverrides = { ...overrides };
+                delete newOverrides[id];
+                updateState('overrides', newOverrides);
+                updateState('editingRow', null);
+            };
+
+            const toggleEditRow = (id) => {
+                updateState('editingRow', editingRow === id ? null : id);
+            };
+
+            // Filters
+            const isIndoor = selectedIndoor === 'true';
+            const availableModules = inventory.filter(i => i.type === 'module' && i.indoor === isIndoor);
+            const uniquePitches = [...new Set(availableModules.map(m => m.pitch))].sort((a,b) => a-b);
+            const filteredModules = selectedPitch ? availableModules.filter(m => m.pitch == selectedPitch) : [];
+            const readyUnits = inventory.filter(i => i.type === 'ready' && i.indoor === isIndoor);
+
+            const selectedModule = inventory.find(i => i.id === selectedModuleId);
+            const cabinets = inventory.filter(i => {
+                if (i.type !== 'cabinet') return false;
+                if (!selectedModule) return true; 
+                const wMod = i.width % selectedModule.width;
+                const hMod = i.height % selectedModule.height;
+                return wMod === 0 && hMod === 0;
+            });
+
+            const cards = inventory.filter(i => i.type === 'card');
+            const psus = inventory.filter(i => i.type === 'psu');
+            const processors = inventory.filter(i => i.type === 'processor');
+
+            // --- REAL-TIME CALCULATION ---
+            React.useEffect(() => {
+                const getPriceInInr = (item) => {
+                    if (!item) return 0;
+                    const basePrice = Number(item.price || 0);
+                    const carriage = Number(item.carriage || 0);
+                    const totalBase = basePrice + carriage; 
+                    if (item.currency === 'USD') return totalBase * exchangeRate;
+                    return totalBase; 
+                };
+
+                let module, cabinet, card, psu, proc;
+                let totalModules = 0;
+
+                if (assemblyMode === 'assembled') {
+                    module = inventory.find(i => i.id === selectedModuleId);
+                    cabinet = inventory.find(i => i.id === selectedCabinetId);
+                    card = inventory.find(i => i.id === selectedCardId);
+                    psu = inventory.find(i => i.id === selectedPSUId);
+                    proc = inventory.find(i => i.id === selectedProcId);
+                    if (!module || !cabinet) { setCalculation(null); return; }
+                } else {
+                    const readyUnit = inventory.find(i => i.id === readyId);
+                    proc = inventory.find(i => i.id === selectedProcId);
+                    if (!readyUnit) { setCalculation(null); return; }
+                    module = readyUnit; 
+                    cabinet = readyUnit;
+                }
+
+                // Dimensions
+                const w_mm = unit === 'm' ? targetWidth * 1000 : targetWidth * 304.8;
+                const h_mm = unit === 'm' ? targetHeight * 1000 : targetHeight * 304.8;
+
+                // Sizing Logic
+                const rawCols = w_mm / cabinet.width;
+                const rawRows = h_mm / cabinet.height;
+                let cols, rows;
+                if (sizingMode === 'up') { cols = Math.ceil(rawCols); rows = Math.ceil(rawRows); }
+                else if (sizingMode === 'down') { cols = Math.max(1, Math.floor(rawCols)); rows = Math.max(1, Math.floor(rawRows)); }
+                else { cols = Math.max(1, Math.round(rawCols)); rows = Math.max(1, Math.round(rawRows)); }
+
+                const finalW_mm = cols * cabinet.width;
+                const finalH_mm = rows * cabinet.height;
+                const totalCabinetsPerScreen = cols * rows;
+
+                // Area Calculation
+                const areaSqFt = (finalW_mm * finalH_mm) / 92903; 
+
+                // --- BUILD ITEM LIST ---
+                let rawItems = [];
+                if (assemblyMode === 'assembled') {
+                    const modsPerCab = (Math.floor(cabinet.width / module.width) * Math.floor(cabinet.height / module.height));
+                    totalModules = totalCabinetsPerScreen * modsPerCab;
+                    rawItems = [
+                        { id: 'modules', name: 'Modules', spec: `${module.brand} ${module.model}`, qty: totalModules, unit: getPriceInInr(module), total: totalModules * getPriceInInr(module) },
+                        { id: 'cabinets', name: 'Cabinets', spec: `${cabinet.brand} ${cabinet.model}`, qty: totalCabinetsPerScreen, unit: getPriceInInr(cabinet), total: totalCabinetsPerScreen * getPriceInInr(cabinet) },
+                        { id: 'cards', name: 'Cards', spec: card ? card.brand : '-', qty: totalCabinetsPerScreen, unit: getPriceInInr(card), total: totalCabinetsPerScreen * getPriceInInr(card) },
+                        { id: 'psu', name: 'PSU', spec: psu ? psu.brand : '-', qty: totalCabinetsPerScreen, unit: getPriceInInr(psu), total: totalCabinetsPerScreen * getPriceInInr(psu) },
+                    ];
+                } else {
+                    rawItems = [
+                        { id: 'ready', name: 'LED Panels (Ready)', spec: `${cabinet.brand} ${cabinet.model}`, qty: totalCabinetsPerScreen, unit: getPriceInInr(cabinet), total: totalCabinetsPerScreen * getPriceInInr(cabinet) }
+                    ];
+                    totalModules = totalCabinetsPerScreen;
+                }
+                if (proc) {
+                    rawItems.push({ id: 'processor', name: 'Processor', spec: proc.brand, qty: 1, unit: getPriceInInr(proc), total: getPriceInInr(proc) });
+                }
+
+                // --- APPLY OVERRIDES ---
+                const finalItems = rawItems.map(item => {
+                    if (overrides[item.id]) {
+                        const ov = overrides[item.id];
+                        const finalQty = ov.qty !== undefined && ov.qty !== '' ? Number(ov.qty) : item.qty;
+                        const finalRate = ov.rate !== undefined && ov.rate !== '' ? Number(ov.rate) : item.unit;
+                        return { ...item, qty: finalQty, unit: finalRate, total: finalQty * finalRate, isOverridden: true };
+                    }
+                    return item;
+                });
+
+                const costPerScreenBase = finalItems.reduce((acc, item) => acc + item.total, 0);
+
+                // Extras
+                const calculatedExtras = {};
+                Object.keys(extras).forEach(key => {
+                    const item = extras[key];
+                    if (item.type === 'pct') calculatedExtras[key] = costPerScreenBase * (item.val / 100);
+                    else calculatedExtras[key] = Number(item.val);
+                });
+                const totalExtrasPerScreen = Object.values(calculatedExtras).reduce((a,b) => a + b, 0);
+                
+                // Totals
+                const costPerScreen = costPerScreenBase + totalExtrasPerScreen;
+                const totalProjectCost = costPerScreen * screenQty;
+                const sellPerScreen = costPerScreen * (1 + margin/100);
+                const totalProjectSell = sellPerScreen * screenQty;
+                const marginPerScreen = sellPerScreen - costPerScreen;
+                const marginTotal = totalProjectSell - totalProjectCost;
+
+                const matrix = {
+                    cost: { sqft: costPerScreen / areaSqFt, unit: costPerScreen, total: totalProjectCost },
+                    margin: { sqft: marginPerScreen / areaSqFt, unit: marginPerScreen, total: marginTotal },
+                    sell: { sqft: sellPerScreen / areaSqFt, unit: sellPerScreen, total: totalProjectSell },
+                    sqft: { perScreen: areaSqFt, total: areaSqFt * screenQty }
+                };
+
+                setCalculation({
+                    gridCols: cols, gridRows: rows,
+                    finalWidth: (finalW_mm / 1000).toFixed(2), finalHeight: (finalH_mm / 1000).toFixed(2),
+                    totalCabinets: totalCabinetsPerScreen, moduleType: module, cabinetType: cabinet,
+                    breakdown: { qtyModules: totalModules, extras: totalExtrasPerScreen },
+                    detailedItems: finalItems, calculatedExtras, costPerScreen, totalProjectCost,
+                    finalPrice: totalProjectSell, totalProjectSell, assemblyMode, screenQty, matrix
+                });
+
+            }, [targetWidth, targetHeight, unit, selectedIndoor, assemblyMode, selectedPitch, selectedModuleId, selectedCabinetId, selectedCardId, selectedPSUId, selectedProcId, readyId, sizingMode, margin, extras, inventory, exchangeRate, screenQty, overrides]);
+
+            return (
+                <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 relative">
+                    
+                    {/* PDF Preview Modal */}
+                    {showPreview && calculation && (
+                        <div className="fixed inset-0 z-[100] bg-black/80 flex justify-center items-center p-4">
+                            <div className="bg-white max-w-4xl w-full h-[90vh] rounded-lg shadow-2xl flex flex-col">
+                                <div className="p-4 border-b flex justify-between items-center bg-slate-100 rounded-t-lg">
+                                    <h2 className="font-bold text-lg text-slate-800 flex items-center gap-2"><Eye size={20}/> Print Preview</h2>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => setShowPreview(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded">Close</button>
+                                        <button onClick={() => window.print()} className="px-4 py-2 bg-teal-600 text-white hover:bg-teal-700 rounded flex items-center gap-2"><Printer size={16}/> Print / Save PDF</button>
+                                    </div>
+                                </div>
+                                <div className="flex-1 overflow-auto p-8 bg-slate-200">
+                                    <PrintLayout data={{...calculation, clientName: client, projectName: project, margin}} currency='INR' exchangeRate={exchangeRate} />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="print-only">
+                        {calculation && <PrintLayout data={{...calculation, clientName: client, projectName: project, margin}} currency='INR' exchangeRate={exchangeRate} />}
+                    </div>
+
+                    {/* Left: Configuration */}
+                    <div className="xl:col-span-4 space-y-6">
+                        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2"><Settings className="w-4 h-4 text-teal-600 dark:text-teal-400" /> Project Specs</h3>
+                                <div className="flex items-center gap-2">
+                                    <div className="flex items-center bg-slate-100 dark:bg-slate-700 rounded px-2" title="Exchange rate for USD items">
+                                        <span className="text-[10px] text-slate-500 mr-1">1$ = ₹</span>
+                                        <input 
+                                            type="number" 
+                                            value={exchangeRate} 
+                                            onChange={e => setExchangeRate(Number(e.target.value))}
+                                            className="w-10 bg-transparent text-xs py-1 outline-none font-bold dark:text-white"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-3 mb-4">
+                                <input value={client} onChange={e => updateState('client', e.target.value)} className="p-2 border rounded text-sm w-full dark:bg-slate-700 dark:border-slate-600 dark:text-white" placeholder="Client Name" />
+                                <input value={project} onChange={e => updateState('project', e.target.value)} className="p-2 border rounded text-sm w-full dark:bg-slate-700 dark:border-slate-600 dark:text-white" placeholder="Project Name" />
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-3 mb-4">
+                                <div className="flex flex-col gap-1">
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-xs text-slate-500 dark:text-slate-400">Width</label>
+                                        <div className="flex text-[10px] bg-slate-100 dark:bg-slate-700 rounded p-0.5">
+                                            <button onClick={() => updateState('unit', 'm')} className={`px-1.5 rounded ${unit === 'm' ? 'bg-white dark:bg-slate-600 shadow text-slate-800 dark:text-white' : 'text-slate-400'}`}>m</button>
+                                            <button onClick={() => updateState('unit', 'ft')} className={`px-1.5 rounded ${unit === 'ft' ? 'bg-white dark:bg-slate-600 shadow text-slate-800 dark:text-white' : 'text-slate-400'}`}>ft</button>
+                                        </div>
+                                    </div>
+                                    <input type="number" value={targetWidth} onChange={e => updateState('targetWidth', e.target.value)} className="w-full p-2 border rounded text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-xs text-slate-500 dark:text-slate-400">Height</label>
+                                        <span className="text-[10px] text-slate-400 px-1 py-0.5">{unit}</span>
+                                    </div>
+                                    <input type="number" value={targetHeight} onChange={e => updateState('targetHeight', e.target.value)} className="w-full p-2 border rounded text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-xs text-slate-500 dark:text-slate-400 font-bold text-teal-600">Quantity</label>
+                                    </div>
+                                    <input type="number" min="1" value={screenQty} onChange={e => updateState('screenQty', Math.max(1, parseInt(e.target.value)) || 1)} className="w-full p-2 border border-teal-200 rounded text-sm dark:bg-slate-700 dark:border-teal-900 dark:text-white font-bold" />
+                                </div>
+                            </div>
+
+                            <div className="mb-4">
+                                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Sizing Mode</label>
+                                <div className="flex gap-1 mt-1 text-xs">
+                                    {['closest', 'up', 'down'].map(m => (
+                                        <button key={m} onClick={() => updateState('sizingMode', m)} className={`flex-1 py-2 rounded border capitalize ${sizingMode === m ? 'bg-teal-600 text-white border-teal-600' : 'bg-white dark:bg-slate-700 dark:border-slate-600 dark:text-white'}`}>{m === 'closest' ? 'Closest' : `Round ${m}`}</button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">1. Application</label>
+                                    <div className="flex gap-2 mt-1">
+                                        <button onClick={() => { updateState('selectedIndoor', 'true'); updateState('selectedModuleId', ''); updateState('readyId', ''); }} className={`flex-1 py-2 text-sm rounded border transition-colors ${selectedIndoor === 'true' ? 'bg-teal-600 text-white border-teal-600' : 'bg-slate-50 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-300'}`}>Indoor</button>
+                                        <button onClick={() => { updateState('selectedIndoor', 'false'); updateState('selectedModuleId', ''); updateState('readyId', ''); }} className={`flex-1 py-2 text-sm rounded border transition-colors ${selectedIndoor === 'false' ? 'bg-teal-600 text-white border-teal-600' : 'bg-slate-50 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-300'}`}>Outdoor</button>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">2. Supply Type</label>
+                                    <div className="flex gap-2 mt-1">
+                                        <button onClick={() => updateState('assemblyMode', 'assembled')} className={`flex-1 py-2 text-sm rounded border transition-colors ${assemblyMode === 'assembled' ? 'bg-teal-600 text-white border-teal-600' : 'bg-slate-50 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-300'}`}>Assembled</button>
+                                        <button onClick={() => updateState('assemblyMode', 'ready')} className={`flex-1 py-2 text-sm rounded border transition-colors ${assemblyMode === 'ready' ? 'bg-teal-600 text-white border-teal-600' : 'bg-slate-50 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-300'}`}>Ready Cabinet</button>
+                                    </div>
+                                </div>
+
+                                {assemblyMode === 'assembled' ? (
+                                    <>
+                                        <div className="grid grid-cols-2 gap-2 mt-1">
+                                            <select value={selectedPitch} onChange={e => { updateState('selectedPitch', e.target.value); updateState('selectedModuleId', ''); }} className="p-2 border rounded text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                                <option value="">Pitch...</option>
+                                                {uniquePitches.map(p => <option key={p} value={p}>P{p}</option>)}
+                                            </select>
+                                            <select value={selectedModuleId} onChange={e => updateState('selectedModuleId', e.target.value)} className="p-2 border rounded text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white" disabled={!selectedPitch}>
+                                                <option value="">Select Variant...</option>
+                                                {filteredModules.map(m => <option key={m.id} value={m.id}>{m.brand} {m.model}</option>)}
+                                            </select>
+                                        </div>
+                                        {selectedModule ? (
+                                            <select value={selectedCabinetId} onChange={e => updateState('selectedCabinetId', e.target.value)} className="w-full p-2 border rounded text-sm mt-1 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                                <option value="">Select Cabinet...</option>
+                                                {cabinets.map(c => <option key={c.id} value={c.id}>{c.brand} {c.model} ({c.width}x{c.height})</option>)}
+                                            </select>
+                                        ) : (
+                                            <div className="text-xs text-amber-600 p-2 bg-amber-50 dark:bg-amber-900/20 rounded mt-1">Select a module first</div>
+                                        )}
+                                        <div className="space-y-2 mt-1">
+                                            <select value={selectedCardId} onChange={e => updateState('selectedCardId', e.target.value)} className="w-full p-2 border rounded text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"><option value="">Receiving Card...</option>{cards.map(c => <option key={c.id} value={c.id}>{c.brand} {c.model}</option>)}</select>
+                                            <select value={selectedPSUId} onChange={e => updateState('selectedPSUId', e.target.value)} className="w-full p-2 border rounded text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"><option value="">Power Supply...</option>{psus.map(c => <option key={c.id} value={c.id}>{c.brand} {c.model}</option>)}</select>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="mt-2">
+                                        <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Select Screen Model</label>
+                                        <select value={readyId} onChange={e => updateState('readyId', e.target.value)} className="w-full p-2 border rounded text-sm mt-1 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                            <option value="">Select Ready Unit...</option>
+                                            {readyUnits.map(u => <option key={u.id} value={u.id}>{u.brand} {u.model} (P{u.pitch})</option>)}
+                                        </select>
+                                    </div>
+                                )}
+                                <select value={selectedProcId} onChange={e => updateState('selectedProcId', e.target.value)} className="w-full p-2 border rounded text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"><option value="">Processor...</option>{processors.map(c => <option key={c.id} value={c.id}>{c.brand} {c.model}</option>)}</select>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Middle: Extras & Costs */}
+                    <div className="xl:col-span-4 space-y-6">
+                         <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                            <h3 className="font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2"><Wrench className="w-4 h-4 text-teal-600 dark:text-teal-400" /> Additional Costs (Per Screen)</h3>
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                <ExtraInput label="Structure Cost" fieldKey="structure" extras={extras} updateExtra={updateExtra} currency='INR' />
+                                <ExtraInput label="Hardware & Cables" fieldKey="hardware" extras={extras} updateExtra={updateExtra} currency='INR' />
+                                <ExtraInput label="Assembly Labour" fieldKey="assembly" extras={extras} updateExtra={updateExtra} currency='INR' />
+                                <ExtraInput label="Packaging" fieldKey="packaging" extras={extras} updateExtra={updateExtra} currency='INR' />
+                                <ExtraInput label="Transport" fieldKey="transport" extras={extras} updateExtra={updateExtra} currency='INR' />
+                                <ExtraInput label="Install Labour" fieldKey="install" extras={extras} updateExtra={updateExtra} currency='INR' />
+                                <ExtraInput label="Wastage / Buffer" fieldKey="wastage" extras={extras} updateExtra={updateExtra} currency='INR' />
+                                <ExtraInput label="Operational Overheads" fieldKey="overheads" extras={extras} updateExtra={updateExtra} currency='INR' />
+                            </div>
+
+                            {calculation && (
+                                <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-700">
+                                    <div className="mb-4 overflow-x-auto">
+                                        <table className="w-full text-xs text-slate-600 dark:text-slate-300">
+                                            <thead>
+                                                <tr className="border-b border-slate-200 dark:border-slate-600">
+                                                    <th className="text-left pb-1">Item</th>
+                                                    <th className="text-right pb-1">Rate</th>
+                                                    <th className="text-center pb-1 border-l border-slate-200 dark:border-slate-700 px-1">Qty(1)</th>
+                                                    <th className="text-right pb-1">Amt(1)</th>
+                                                    <th className="text-center pb-1 border-l border-slate-200 dark:border-slate-700 px-1 font-bold">Qty({screenQty})</th>
+                                                    <th className="text-right pb-1 font-bold">Amt({screenQty})</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {calculation.detailedItems.map((item, i) => (
+                                                    <tr key={i} className={`border-b border-slate-100 dark:border-slate-700/50 ${item.isOverridden ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''}`}>
+                                                        <td className="py-2 flex items-center gap-1">
+                                                            {item.name}
+                                                            <button onClick={() => toggleEditRow(item.id)} className={`p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 ${item.isOverridden ? 'text-amber-500' : 'text-slate-300 hover:text-slate-500'}`}>
+                                                                <Edit size={12} />
+                                                            </button>
+                                                            {item.isOverridden && (
+                                                                <button onClick={() => clearOverride(item.id)} className="p-1 text-slate-400 hover:text-red-500" title="Reset to calculated"><RefreshCw size={12}/></button>
+                                                            )}
+                                                        </td>
+                                                        <td className="text-right py-2">
+                                                            {editingRow === item.id ? (
+                                                                <input 
+                                                                    type="number" 
+                                                                    className="w-16 p-1 text-right text-xs border rounded dark:bg-slate-700 dark:border-slate-500"
+                                                                    value={overrides[item.id]?.rate !== undefined ? overrides[item.id].rate : item.unit}
+                                                                    onChange={e => handleOverride(item.id, 'rate', e.target.value)}
+                                                                />
+                                                            ) : (
+                                                                formatCurrency(item.unit, 'INR', false)
+                                                            )}
+                                                        </td>
+                                                        <td className="text-center py-2 border-l border-slate-100 dark:border-slate-700">
+                                                            {editingRow === item.id ? (
+                                                                <input 
+                                                                    type="number" 
+                                                                    className="w-12 p-1 text-center text-xs border rounded dark:bg-slate-700 dark:border-slate-500"
+                                                                    value={overrides[item.id]?.qty !== undefined ? overrides[item.id].qty : item.qty}
+                                                                    onChange={e => handleOverride(item.id, 'qty', e.target.value)}
+                                                                />
+                                                            ) : (
+                                                                item.qty
+                                                            )}
+                                                        </td>
+                                                        <td className="text-right py-2">{formatCurrency(item.total, 'INR', false)}</td>
+                                                        <td className="text-center py-2 border-l border-slate-100 dark:border-slate-700 font-bold">
+                                                            {item.qty * screenQty}
+                                                        </td>
+                                                        <td className="text-right py-2 font-bold">
+                                                            {formatCurrency(item.total * screenQty, 'INR', false)}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                                <tr>
+                                                    <td colSpan="2" className="text-right font-medium py-2 text-xs text-slate-400 uppercase">Add. Costs</td>
+                                                    <td className="text-center py-2 border-l border-slate-100 dark:border-slate-700 text-slate-400">-</td>
+                                                    <td className="text-right font-medium py-2 text-slate-400">{formatCurrency(calculation.breakdown.extras, 'INR', false)}</td>
+                                                    <td className="text-center py-2 border-l border-slate-100 dark:border-slate-700 font-bold text-slate-400">-</td>
+                                                    <td className="text-right font-bold py-2 text-slate-400">{formatCurrency(calculation.breakdown.extras * screenQty, 'INR', false)}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <div className="bg-teal-50 dark:bg-teal-900/30 p-4 rounded-lg">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-sm font-bold text-teal-800 dark:text-teal-300">Margin</span>
+                                            <span className="font-bold text-teal-800 dark:text-teal-300">{margin}%</span>
+                                        </div>
+                                        <input type="range" min="0" max="100" value={margin} onChange={e => updateState('margin', Number(e.target.value))} className="w-full accent-teal-600" />
+                                    </div>
+
+                                    {/* Financial Matrix UI */}
+                                    <div className="mt-4 border border-slate-200 dark:border-slate-700 rounded overflow-hidden">
+                                        <table className="w-full text-xs">
+                                            <thead className="bg-slate-100 dark:bg-slate-700 font-bold text-slate-600 dark:text-slate-300">
+                                                <tr>
+                                                    <th className="p-2 text-left">Metric</th>
+                                                    <th className="p-2 text-right">Per SqFt</th>
+                                                    <th className="p-2 text-right">Per Screen</th>
+                                                    <th className="p-2 text-right bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-teal-200">Total Project</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100 dark:divide-slate-700 dark:text-slate-200">
+                                                <tr>
+                                                    <td className="p-2 font-medium">Cost</td>
+                                                    <td className="p-2 text-right">{formatCurrency(calculation.matrix.cost.sqft, 'INR')}</td>
+                                                    <td className="p-2 text-right">{formatCurrency(calculation.matrix.cost.unit, 'INR', false)}</td>
+                                                    <td className="p-2 text-right font-medium bg-teal-50 dark:bg-teal-900/20">{formatCurrency(calculation.matrix.cost.total, 'INR', false)}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td className="p-2 font-medium">Margin</td>
+                                                    <td className="p-2 text-right text-green-600 dark:text-green-400">{formatCurrency(calculation.matrix.margin.sqft, 'INR')}</td>
+                                                    <td className="p-2 text-right text-green-600 dark:text-green-400">{formatCurrency(calculation.matrix.margin.unit, 'INR', false)}</td>
+                                                    <td className="p-2 text-right font-medium text-green-700 dark:text-green-300 bg-teal-50 dark:bg-teal-900/20">{formatCurrency(calculation.matrix.margin.total, 'INR', false)}</td>
+                                                </tr>
+                                                <tr className="bg-slate-50 dark:bg-slate-800/50">
+                                                    <td className="p-2 font-bold">Sell Price</td>
+                                                    <td className="p-2 text-right font-bold">{formatCurrency(calculation.matrix.sell.sqft, 'INR')}</td>
+                                                    <td className="p-2 text-right font-bold">{formatCurrency(calculation.matrix.sell.unit, 'INR', false)}</td>
+                                                    <td className="p-2 text-right font-bold text-teal-700 dark:text-teal-400 bg-teal-100 dark:bg-teal-900/40">{formatCurrency(calculation.matrix.sell.total, 'INR', false)}</td>
+                                                </tr>
+                                                 {/* SFT Row */}
+                                                <tr>
+                                                    <td className="p-2 font-medium text-slate-400">Total Area</td>
+                                                    <td className="p-2 text-right text-slate-500">-</td>
+                                                    <td className="p-2 text-right text-slate-500">{calculation.matrix.sqft.perScreen.toFixed(2)} Sft</td>
+                                                    <td className="p-2 text-right font-bold text-slate-600 dark:text-slate-300">{calculation.matrix.sqft.total.toFixed(2)} Sq.Ft</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Right: Visualizer & Actions */}
+                    <div className="xl:col-span-4 space-y-6">
+                        {calculation ? (
+                            <div className="space-y-6">
+                                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                                    <h3 className="font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2"><Monitor className="w-4 h-4 text-teal-600 dark:text-teal-400" /> Layout</h3>
+                                    <ScreenVisualizer cols={calculation.gridCols} rows={calculation.gridRows} module={calculation.moduleType} cabinet={calculation.cabinetType} unit={unit} />
+                                    
+                                    <div className="grid grid-cols-2 gap-2 mt-4">
+                                        <button onClick={() => onSaveQuote(calculation.finalPrice)} className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-3 rounded flex items-center justify-center gap-2 shadow-sm font-semibold transition-colors">
+                                            <Save size={16} /> Save Quote
+                                        </button>
+                                        <button onClick={() => setShowPreview(true)} className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-3 rounded flex items-center justify-center gap-2 shadow-sm font-semibold transition-colors">
+                                            <Eye size={16} /> Preview PDF
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 min-h-[300px]">
+                                <Calculator className="w-12 h-12 mb-4 opacity-30" />
+                                <p>Enter details to see preview</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Main App ---
+        const App = () => {
+            const [user, setUser] = React.useState(null);
+            const [view, setView] = React.useState('quote');
+            const [inventory, setInventory] = React.useState([]);
+            const [darkMode, setDarkMode] = React.useState(false);
+            const [exchangeRate, setExchangeRate] = React.useState(84);
+
+            // Lifted State for Sticky Behavior
+            const initialCalcState = {
+                client: '', project: '', screenQty: 1, targetWidth: 3, targetHeight: 2, unit: 'ft', // Changed default to ft
+                selectedIndoor: 'true', assemblyMode: 'assembled', selectedPitch: '',
+                selectedModuleId: '', selectedCabinetId: '', selectedCardId: '',
+                selectedPSUId: '', selectedProcId: '', sizingMode: 'closest', readyId: '',
+                margin: 30,
+                extras: {
+                    assembly: { val: 0, type: 'abs' }, 
+                    hardware: { val: 5000, type: 'abs' }, 
+                    packaging: { val: 2000, type: 'abs' }, 
+                    transport: { val: 5000, type: 'abs' }, 
+                    install: { val: 10000, type: 'abs' }, 
+                    wastage: { val: 2000, type: 'abs' }, 
+                    overheads: { val: 5000, type: 'abs' },
+                    structure: { val: 0, type: 'abs' } 
+                },
+                overrides: {},
+                editingRow: null
+            };
+
+            const [calcState, setCalcState] = React.useState(initialCalcState);
+
+            React.useEffect(() => {
+                const init = async () => {
+                    if (!isConfigured) return; 
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                         await auth.signInWithCustomToken(__initial_auth_token);
+                    } else {
+                         await auth.signInAnonymously();
+                    }
+                };
+                init();
+                if (isConfigured) auth.onAuthStateChanged(setUser);
+            }, []);
+
+            React.useEffect(() => {
+                document.documentElement.classList.toggle('dark', darkMode);
+            }, [darkMode]);
+
+            React.useEffect(() => {
+                if (!user || !db) return;
+                return db.collection('artifacts').doc(appId).collection('public').doc('data').collection('inventory')
+                         .onSnapshot(snap => setInventory(snap.docs.map(d => ({id: d.id, ...d.data()}))));
+            }, [user]);
+
+            const handleSaveQuote = async (finalAmount) => {
+                if(!calcState.client || !calcState.project) return alert("Please enter Client and Project names.");
+                try {
+                    await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('quotes').add({
+                        client: calcState.client,
+                        project: calcState.project,
+                        calculatorState: calcState,
+                        finalAmount: finalAmount || 0,
+                        updatedAt: new Date()
+                    });
+                    alert("Quote Saved Successfully!");
+                } catch(e) { console.error(e); alert("Error saving quote."); }
+            };
+
+            const handleLoadQuote = (quote, isDuplicate) => {
+                const newState = { ...quote.calculatorState };
+                if (isDuplicate) {
+                    newState.client = newState.client + ' (Copy)';
+                    newState.project = newState.project + ' (Copy)';
+                }
+                setCalcState(newState);
+                setView('quote');
+            };
+
+            if (!isConfigured) return <div className="p-10 text-center">Config Missing</div>;
+            if (!user) return <div className="h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div></div>;
+
+            return (
+                <div className="min-h-screen no-print pb-20 bg-slate-50 dark:bg-slate-900 transition-colors">
+                    <nav className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50 px-6 h-16 flex items-center justify-between shadow-sm transition-colors">
+                        <span className="font-bold text-lg text-slate-900 dark:text-white">ADMIRE <span className="text-teal-600 dark:text-teal-400 font-light">SIGNAGE</span></span>
+                        <div className="flex gap-4 items-center">
+                            <div className="flex gap-2">
+                                <button onClick={() => setView('quote')} className={`px-4 py-2 rounded-full text-sm font-bold transition-colors ${view === 'quote' ? 'bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>Calculator</button>
+                                <button onClick={() => setView('inventory')} className={`px-4 py-2 rounded-full text-sm font-bold transition-colors ${view === 'inventory' ? 'bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>Inventory</button>
+                                <button onClick={() => setView('saved')} className={`px-4 py-2 rounded-full text-sm font-bold transition-colors ${view === 'saved' ? 'bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>Saved Quotes</button>
+                            </div>
+                            <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 transition-colors">
+                                {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+                            </button>
+                        </div>
+                    </nav>
+                    <main className="max-w-[1600px] mx-auto p-6">
+                        {view === 'inventory' && <InventoryManager user={user} />}
+                        {view === 'saved' && <SavedQuotesManager user={user} onLoadQuote={handleLoadQuote} />}
+                        {view === 'quote' && (
+                            <QuoteCalculator 
+                                user={user} 
+                                inventory={inventory} 
+                                state={calcState} 
+                                setState={setCalcState}
+                                exchangeRate={exchangeRate}
+                                setExchangeRate={setExchangeRate}
+                                onSaveQuote={handleSaveQuote}
+                            />
+                        )}
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

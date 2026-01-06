@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 transition-colors duration-200 font-['Inter',_sans-serif];
+  }
+}
+
+/* Print Styles */
+@media print {
+    @page { size: A4; margin: 0; }
+    .no-print { display: none !important; }
+    .print-only { display: block !important; }
+    body { background: white; -webkit-print-color-adjust: exact; }
+    #root { margin: 0; padding: 0; }
+    .dark { color: black !important; background: white !important; }
+    .modal-content { box-shadow: none !important; border: none !important; }
+}
+
+.print-only { display: none; }
+
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
